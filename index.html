@@ -1,0 +1,691 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="A free self-study flight plan from math foundations to orbital mechanics, CAD and simulation.">
+<style>html{color-scheme:light}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Ardesams Flight Plan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@500;600;700&family=Public+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one 880px flight-plan column. Telemetry header (altitude tape + readouts), phase chips, collapsible phase cards, toolkit table, backup panel. */
+:root {
+  --bg: #F2F4F7;
+  --surface: #FFFFFF;
+  --fg: #152232;
+  --muted: #5A6A7B;
+  --line: #D6DDE5;
+  --accent: #C9450F;
+  --accent-soft: #FBE7DC;
+  --good: #23805A;
+  --good-soft: #DDF1E7;
+  --display: "Saira Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0D141D; --surface: #141E2A; --fg: #E4EAF0; --muted: #93A3B4; --line: #263445;
+    --accent: #FF7B3A; --accent-soft: #3A2216; --good: #4CC28B; --good-soft: #143326;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0D141D; --surface: #141E2A; --fg: #E4EAF0; --muted: #93A3B4; --line: #263445;
+  --accent: #FF7B3A; --accent-soft: #3A2216; --good: #4CC28B; --good-soft: #143326;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: 16px;
+  line-height: 1.55;
+}
+.wrap {
+  max-width: 880px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 40px 64px;
+  display: grid;
+  gap: 40px;
+}
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+h1, h2, h3 { font-family: var(--display); text-wrap: balance; margin: 0; line-height: 1.1; }
+.eyebrow {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* Header */
+.masthead { display: grid; gap: 10px; }
+.masthead h1 { font-size: clamp(40px, 7vw, 60px); font-weight: 700; letter-spacing: -0.01em; }
+.masthead p { margin: 0; max-width: 62ch; color: var(--muted); }
+
+/* Telemetry */
+.telemetry {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 28px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 24px;
+}
+.tape { position: relative; height: 230px; }
+.tape-rail, .tape-fill {
+  position: absolute; left: 14px; width: 6px; border-radius: 3px;
+}
+.tape-rail { top: 0; bottom: 0; background: var(--line); }
+.tape-fill { bottom: 0; background: var(--accent); height: 0; transition: height .5s ease; }
+.tape-mark { position: absolute; left: 0; right: 0; height: 0; }
+.tape-mark::before {
+  content: ""; position: absolute; left: 8px; width: 18px; top: 0; border-top: 1px solid var(--muted);
+}
+.tape-mark span {
+  position: absolute; left: 34px; top: -9px;
+  font-family: var(--mono); font-size: 11px; line-height: 1.3; color: var(--muted); white-space: nowrap;
+}
+.rocket {
+  position: absolute; left: 4px; width: 26px; height: 26px; bottom: 0;
+  transform: translateY(50%);
+  transition: bottom .5s ease;
+}
+.rocket path { fill: var(--accent); }
+.rocket .flame { fill: var(--muted); }
+@media (prefers-reduced-motion: reduce) {
+  .tape-fill, .rocket, .bar i { transition: none; }
+}
+.readouts { display: grid; gap: 18px; align-content: start; min-width: 0; }
+.alt-value {
+  font-family: var(--display); font-weight: 700; font-size: 56px; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.alt-value small { font-family: var(--mono); font-size: 16px; font-weight: 400; color: var(--muted); margin-left: 6px; }
+.stat-row { display: flex; flex-wrap: wrap; gap: 12px 32px; }
+.stat { display: grid; gap: 2px; }
+.stat b { font-family: var(--display); font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.next {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  display: grid; gap: 4px;
+}
+.next a { color: var(--fg); font-weight: 600; text-decoration: none; }
+.next a:hover { color: var(--accent); }
+
+/* Phase chips */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px;
+  background: var(--surface); color: var(--fg); text-decoration: none;
+  font-size: 14px;
+}
+.chip:hover { border-color: var(--accent); }
+.chip .num { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.chip .pct { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip.current { border-color: var(--accent); }
+.chip.current .pct { color: var(--accent); }
+.chip.complete .pct { color: var(--good); }
+
+/* Controls */
+.controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); cursor: pointer; }
+.toggle input { accent-color: var(--accent); width: 16px; height: 16px; }
+
+/* Phases */
+.phases { display: grid; gap: 14px; }
+details.phase {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  scroll-margin-top: 16px;
+}
+details.phase[open] { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+summary {
+  list-style: none; cursor: pointer;
+  display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 16px; align-items: center;
+  padding: 18px 20px;
+}
+summary::-webkit-details-marker { display: none; }
+.phase-num {
+  font-family: var(--display); font-weight: 700; font-size: 36px; line-height: 1; color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+.phase.complete .phase-num { color: var(--good); }
+.phase-head { display: grid; gap: 4px; min-width: 0; }
+.phase-head h2 { font-size: 24px; font-weight: 600; }
+.phase-meta { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.phase-prog { display: grid; gap: 6px; justify-items: end; min-width: 96px; }
+.phase-prog span { font-family: var(--mono); font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bar { width: 96px; height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .4s ease; }
+.phase.complete .bar i { background: var(--good); }
+.caret { font-family: var(--mono); color: var(--muted); font-size: 12px; }
+details[open] .caret-closed, details:not([open]) .caret-open { display: none; }
+
+.phase-body { padding: 0 20px 22px 92px; display: grid; gap: 22px; }
+.phase-goal { margin: 0; max-width: 62ch; }
+.phase-tip {
+  margin: 0; padding: 10px 14px; border-radius: 8px;
+  background: var(--accent-soft); font-size: 15px; max-width: 62ch;
+}
+.group { display: grid; gap: 6px; }
+.group h3 {
+  font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted);
+}
+.tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.task {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px;
+  padding: 6px 8px; margin-inline: -8px; border-radius: 6px;
+}
+.task:hover { background: var(--bg); }
+.task label { display: flex; gap: 10px; align-items: baseline; cursor: pointer; flex: 1 1 260px; min-width: 0; }
+.task input {
+  appearance: none; -webkit-appearance: none; flex: none;
+  width: 18px; height: 18px; margin: 0; border: 1.5px solid var(--muted); border-radius: 4px;
+  position: relative; top: 3px; cursor: pointer; background: var(--surface);
+}
+.task input:checked { background: var(--good); border-color: var(--good); }
+.task input:checked::after {
+  content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px;
+  border: solid var(--surface); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.task.done .t-text { color: var(--muted); }
+.task .src {
+  font-family: var(--mono); font-size: 12px; text-decoration: none; white-space: nowrap;
+  padding-left: 28px;
+}
+.task label + .src { padding-left: 0; }
+.task .src:hover { text-decoration: underline; }
+.hide-done .task.done { display: none; }
+
+.notes { display: grid; gap: 6px; }
+.notes label { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+textarea {
+  width: 100%; min-height: 80px; resize: vertical;
+  font: inherit; font-size: 15px; color: var(--fg);
+  background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+}
+
+/* Toolkit */
+.section { display: grid; gap: 14px; }
+.section h2 { font-size: 30px; font-weight: 600; }
+.section > p { margin: 0; color: var(--muted); max-width: 62ch; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 15px; }
+th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+th { font-family: var(--mono); font-size: 12px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+td:first-child { white-space: nowrap; color: var(--muted); }
+td a { font-weight: 600; text-decoration: none; }
+td a:hover { text-decoration: underline; }
+
+/* Backup */
+.backup {
+  background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 20px;
+  display: grid; gap: 14px;
+}
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+button {
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--fg);
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+button.danger { color: var(--accent); }
+.msg { font-size: 14px; color: var(--muted); }
+.msg.ok { color: var(--good); }
+.msg.err { color: var(--accent); }
+footer { color: var(--muted); font-size: 14px; }
+
+@media (max-width: 640px) {
+  .wrap { padding-block: 24px 48px; gap: 32px; }
+  .telemetry { grid-template-columns: 1fr; padding: 20px; gap: 20px; }
+  .tape { height: 160px; }
+  .alt-value { font-size: 44px; }
+  summary { grid-template-columns: 40px minmax(0, 1fr); padding: 16px; gap: 12px; }
+  .phase-num { font-size: 28px; }
+  .phase-prog { grid-column: 2; justify-items: start; }
+  .phase-body { padding: 0 16px 18px 16px; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="masthead">
+    <span class="eyebrow">ardesams.com · self-study in aerospace</span>
+    <h1>Flight Plan</h1>
+    <p>A free, self-paced route from rusty math to orbital mechanics, CAD and simulation. Check off tasks as you go. Each finished task raises your altitude, from the launch pad to the orbit of the International Space Station.</p>
+  </header>
+
+  <section class="telemetry" aria-label="Progress">
+    <div class="tape" aria-hidden="true">
+      <div class="tape-rail"></div>
+      <div class="tape-fill" id="tapeFill"></div>
+      <div class="tape-mark" style="bottom:100%"><span>408 km<br>ISS orbit</span></div>
+      <div class="tape-mark" style="bottom:24.5%"><span>100 km<br>Kármán line</span></div>
+      <div class="tape-mark" style="bottom:0%"><span>0 km · pad</span></div>
+      <svg class="rocket" id="rocket" viewBox="0 0 24 24">
+        <path d="M12 1.5c2.9 2.8 4.4 6.3 4.4 10.4V17H7.6v-5.1C7.6 7.8 9.1 4.3 12 1.5z"/>
+        <path d="M7.6 12.5 4 16.6v2.2l3.6-1.6zM16.4 12.5l3.6 4.1v2.2l-3.6-1.6z"/>
+        <path class="flame" d="M9.6 18.2h4.8L12 23z"/>
+      </svg>
+    </div>
+    <div class="readouts">
+      <div>
+        <span class="eyebrow">Altitude</span>
+        <div class="alt-value"><span id="altKm">0</span><small>km</small></div>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><span class="eyebrow">Tasks done</span><b id="statTasks">0 / 0</b></div>
+        <div class="stat"><span class="eyebrow">Current phase</span><b id="statPhase">0</b></div>
+      </div>
+      <div class="next">
+        <span class="eyebrow">Next up</span>
+        <a href="#" id="nextLink">Loading…</a>
+        <span class="msg" id="nextPhase"></span>
+      </div>
+    </div>
+  </section>
+
+  <nav class="chips" id="chips" aria-label="Phases"></nav>
+
+  <div class="controls">
+    <label class="toggle"><input type="checkbox" id="hideDone"> Hide finished tasks</label>
+    <span class="msg">Pace: 5 to 8 hours a week. Steady beats intense.</span>
+  </div>
+
+  <div class="phases" id="phases"></div>
+
+  <section class="section" id="toolkit">
+    <h2>Toolkit</h2>
+    <p>Everything here is free for personal or student use. Plans and licenses change, so check the current terms when you sign up.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Purpose</th><th>Tool</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>CAD</td><td><a href="https://learn.onshape.com/" target="_blank" rel="noopener">Onshape</a></td><td>Runs in the browser. Free-plan designs are public.</td></tr>
+          <tr><td>CAD</td><td><a href="https://www.autodesk.com/products/fusion-360/personal" target="_blank" rel="noopener">Fusion (personal)</a></td><td>More capable, includes some simulation. Free tier has limits.</td></tr>
+          <tr><td>CAD</td><td><a href="https://www.freecad.org/" target="_blank" rel="noopener">FreeCAD</a></td><td>Open source with no restrictions. Steeper learning curve.</td></tr>
+          <tr><td>Rockets</td><td><a href="https://openrocket.info/" target="_blank" rel="noopener">OpenRocket</a></td><td>Stability, altitude and recovery for model rockets.</td></tr>
+          <tr><td>Wings</td><td><a href="https://www.xflr5.tech/xflr5.htm" target="_blank" rel="noopener">XFLR5</a></td><td>Airfoil and wing analysis, glider design.</td></tr>
+          <tr><td>Flight sim</td><td><a href="https://www.flightgear.org/" target="_blank" rel="noopener">FlightGear</a> + <a href="https://github.com/JSBSim-Team/jsbsim" target="_blank" rel="noopener">JSBSim</a></td><td>Open-source flight simulator and flight-dynamics engine.</td></tr>
+          <tr><td>Missions</td><td><a href="https://sourceforge.net/projects/gmat/" target="_blank" rel="noopener">NASA GMAT</a></td><td>Mission design tool used on real NASA missions.</td></tr>
+          <tr><td>Structures</td><td><a href="https://www.ansys.com/academic/students" target="_blank" rel="noopener">Ansys Student</a></td><td>FEA and more, with mesh-size limits.</td></tr>
+          <tr><td>Airflow</td><td><a href="https://www.simscale.com/" target="_blank" rel="noopener">SimScale</a></td><td>Cloud CFD with a free community plan. Projects are public.</td></tr>
+          <tr><td>Airflow</td><td><a href="https://openfoam.org/" target="_blank" rel="noopener">OpenFOAM</a></td><td>Industry-grade open-source CFD. Learn it later.</td></tr>
+          <tr><td>Code</td><td><a href="https://numpy.org/learn/" target="_blank" rel="noopener">Python + NumPy, SciPy</a></td><td>Your main tool. Add Matplotlib and python-control.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="backup" aria-labelledby="backupTitle">
+    <h2 id="backupTitle" style="font-size:24px;font-weight:600">Save and move your progress</h2>
+    <p class="msg" style="margin:0">Progress is stored in this browser only. Copy a backup code to keep it safe or move it to another device.</p>
+    <div class="btn-row">
+      <button type="button" id="copyBtn">Copy backup code</button>
+      <button type="button" class="danger" id="resetBtn">Clear all progress</button>
+      <span class="msg" id="backupMsg" role="status"></span>
+    </div>
+    <div class="btn-row" id="resetConfirm" hidden>
+      <span class="msg err">This unchecks every task and deletes your notes.</span>
+      <button type="button" class="primary" id="resetYes">Yes, clear everything</button>
+      <button type="button" id="resetNo">Cancel</button>
+    </div>
+    <label class="eyebrow" for="restoreBox">Restore from a backup code</label>
+    <textarea id="restoreBox" placeholder="Paste a backup code here" style="min-height:60px"></textarea>
+    <div class="btn-row"><button type="button" id="restoreBtn">Restore</button></div>
+  </section>
+
+  <footer>Built for ardesams.com. Ad astra.</footer>
+</div>
+
+<script>
+const PHASES = [
+  { id: 'p0', stage: 'Ground school', title: 'Math and physics foundations', weeks: '8–10 weeks',
+    goal: 'Rebuild the math every later phase depends on: functions, trigonometry, calculus, linear algebra and differential equations, plus the mechanics of how things move.',
+    tip: 'You are rusty, so start here. Watch the 3Blue1Brown videos for intuition first, then do problems. After week 4 you can run Phase 1 alongside this.',
+    groups: [
+      ['Learn', [
+        ['p0-alg', 'Refresh algebra and functions', 'https://www.khanacademy.org/math/algebra2'],
+        ['p0-trig', 'Trigonometry: unit circle, sine and cosine, 2D vectors', 'https://www.khanacademy.org/math/trigonometry'],
+        ['p0-calc-int', 'Watch Essence of Calculus for intuition', 'https://www.3blue1brown.com/topics/calculus'],
+        ['p0-calc', 'Single-variable calculus problems: derivatives, integrals, series (MIT 18.01SC)', 'https://ocw.mit.edu/courses/18-01sc-single-variable-calculus-fall-2010/'],
+        ['p0-la-int', 'Watch Essence of Linear Algebra', 'https://www.3blue1brown.com/topics/linear-algebra'],
+        ['p0-la', 'Linear algebra with Gilbert Strang, through eigenvalues (MIT 18.06SC)', 'https://ocw.mit.edu/courses/18-06sc-linear-algebra-fall-2011/'],
+        ['p0-de-int', 'Watch the differential equations overview', 'https://www.3blue1brown.com/topics/differential-equations'],
+        ['p0-de', 'First- and second-order ODEs, through spring-mass systems (MIT 18.03SC)', 'https://ocw.mit.edu/courses/18-03sc-differential-equations-fall-2011/'],
+        ['p0-mv', 'Multivariable basics: partial derivatives and gradients (MIT 18.02SC)', 'https://ocw.mit.edu/courses/18-02sc-multivariable-calculus-fall-2010/'],
+        ['p0-phys', 'Classical mechanics: Newton’s laws, energy, momentum, rotation (MIT 8.01SC)', 'https://ocw.mit.edu/courses/8-01sc-classical-mechanics-fall-2016/'],
+      ]],
+      ['Code', [
+        ['p0-np', 'Learn NumPy and Matplotlib basics', 'https://numpy.org/learn/'],
+        ['p0-ball', 'Simulate a falling ball with air drag using Euler’s method and plot it'],
+        ['p0-spring', 'Simulate a spring-mass oscillator and compare your numbers with the exact solution'],
+      ]],
+    ]},
+  { id: 'p1', stage: 'Liftoff', title: 'How things fly', weeks: '4–6 weeks',
+    goal: 'Learn the four forces of flight, why rockets stay stable, and get comfortable in a CAD tool.',
+    groups: [
+      ['Learn', [
+        ['p1-nasa', 'NASA Beginner’s Guide to Aeronautics: lift, drag, thrust, weight', 'https://www1.grc.nasa.gov/beginners-guide-to-aeronautics/'],
+        ['p1-phak', 'FAA Pilot’s Handbook: the principles of flight and aerodynamics chapters', 'https://www.faa.gov/regulations_policies/handbooks_manuals/aviation/phak'],
+        ['p1-delft', 'Audit TU Delft’s Introduction to Aeronautical Engineering on edX', 'https://www.edx.org/search?q=introduction%20to%20aeronautical%20engineering'],
+        ['p1-rocket', 'Rocket stability: center of gravity vs center of pressure'],
+      ]],
+      ['CAD', [
+        ['p1-cad-pick', 'Pick Onshape or Fusion and finish the intro tutorials', 'https://learn.onshape.com/'],
+        ['p1-cad-sketch', 'Practice sketches, constraints, extrude, revolve and fillet'],
+        ['p1-cad-nose', 'Model a nose cone by revolving an ogive profile'],
+        ['p1-cad-fins', 'Model a fin can with three or four fins'],
+      ]],
+      ['Simulate', [
+        ['p1-or', 'Install OpenRocket and run an example rocket', 'https://openrocket.info/'],
+        ['p1-or-design', 'Design your own rocket with a stability margin of 1 to 2 calibers'],
+      ]],
+      ['Build', [
+        ['p1-build', 'Compare three fin shapes in OpenRocket and write up altitude and stability'],
+      ]],
+    ]},
+  { id: 'p2', stage: 'Atmosphere', title: 'Aerodynamics and aircraft', weeks: '6–8 weeks',
+    goal: 'Understand airfoils, drag and stability well enough to design a glider that would actually fly.',
+    groups: [
+      ['Learn', [
+        ['p2-airfoil', 'Airfoils: angle of attack, lift coefficient, stall, Reynolds number'],
+        ['p2-drag', 'Drag: parasite vs induced drag, lift-to-drag ratio'],
+        ['p2-stab', 'Stability and control: center of gravity, neutral point, control surfaces'],
+        ['p2-atm', 'The standard atmosphere: how pressure, density and temperature change with altitude'],
+        ['p2-ocw', 'Browse MIT OpenCourseWare aerodynamics material', 'https://ocw.mit.edu/search/?q=aerodynamics'],
+      ]],
+      ['Simulate', [
+        ['p2-xflr-af', 'XFLR5: compare the NACA 2412 and NACA 0012 airfoils', 'https://www.xflr5.tech/xflr5.htm'],
+        ['p2-xflr-wing', 'XFLR5: design a full glider (wing and tail) and check its stability'],
+        ['p2-fg', 'FlightGear: fly a few aircraft and feel stall and trim', 'https://www.flightgear.org/'],
+      ]],
+      ['CAD', [
+        ['p2-cad-wing', 'Model your glider wing: airfoil profile, loft, ribs and spar'],
+      ]],
+      ['Code', [
+        ['p2-lift', 'Lift and drag calculator across speeds and angles of attack'],
+        ['p2-isa', 'Implement the International Standard Atmosphere model'],
+      ]],
+      ['Side mission · bird strikes', [
+        ['p2-bird-db', 'Explore the FAA Wildlife Strike Database', 'https://wildlife.faa.gov/'],
+        ['p2-bird-chart', 'Chart strikes by altitude, flight phase, species and month'],
+        ['p2-bird-migr', 'Overlay migration timing from BirdCast', 'https://birdcast.info/'],
+      ]],
+    ]},
+  { id: 'p3', stage: 'Orbit', title: 'Spaceflight', weeks: '8–10 weeks',
+    goal: 'Orbits, transfers and rockets. Write your own orbital mechanics code and check it against a NASA tool.',
+    groups: [
+      ['Learn', [
+        ['p3-jpl', 'Read NASA’s Basics of Space Flight', 'https://science.nasa.gov/learn/basics-of-space-flight/'],
+        ['p3-kepler', 'Kepler’s laws, orbital elements and the vis-viva equation'],
+        ['p3-transfer', 'Hohmann transfers, plane changes and delta-v budgets'],
+        ['p3-rocketeq', 'The rocket equation, specific impulse and staging'],
+        ['p3-curtis', 'Curtis, Orbital Mechanics for Engineering Students, chapters 1 to 6 (library or used copy)'],
+      ]],
+      ['Code', [
+        ['p3-prop', 'Two-body orbit propagator with SciPy’s solve_ivp'],
+        ['p3-hohmann', 'Hohmann transfer calculator: delta-v from Earth to Mars'],
+        ['p3-nbody', 'N-body simulation of Earth, Moon and a spacecraft'],
+        ['p3-stage', 'Staging optimizer using the rocket equation'],
+      ]],
+      ['Simulate', [
+        ['p3-gmat', 'Install NASA GMAT, run a sample mission, then plan a lunar transfer', 'https://sourceforge.net/projects/gmat/'],
+        ['p3-ksp', 'Optional: script an automated launch to orbit with KSP and kRPC', 'https://krpc.github.io/krpc/'],
+      ]],
+      ['CAD', [
+        ['p3-cube', 'Model a 1U CubeSat frame (10 × 10 × 10 cm) to the CubeSat spec', 'https://www.cubesat.org/'],
+        ['p3-cube-asm', 'Add solar panels and a circuit-board stack as an assembly'],
+      ]],
+    ]},
+  { id: 'p4', stage: 'Guidance', title: 'Control and GNC', weeks: '8 weeks',
+    goal: 'Guidance, navigation and control: how vehicles know where they are and steer themselves. This is where computer science shines.',
+    groups: [
+      ['Learn', [
+        ['p4-bd', 'Brian Douglas: control fundamentals videos', 'https://www.youtube.com/@BrianBDouglas'],
+        ['p4-pid', 'PID control: tuning, overshoot, steady-state error'],
+        ['p4-ss', 'State-space models and stability (Steve Brunton’s Control Bootcamp)', 'https://www.youtube.com/@Eigensteve'],
+        ['p4-fbs', 'Feedback Systems by Åström and Murray (free online)', 'https://fbswiki.org/'],
+        ['p4-kf', 'Kalman and Bayesian Filters in Python, chapters 1 to 8', 'https://github.com/rlabbe/Kalman-and-Bayesian-Filters-in-Python'],
+      ]],
+      ['Code', [
+        ['p4-pend', 'Stabilize a simulated inverted pendulum with PID'],
+        ['p4-tvc', 'Land a 2D rocket with thrust vector control (your own mini booster landing)'],
+        ['p4-kf-code', 'Add a Kalman filter that fuses noisy accelerometer and altimeter data'],
+      ]],
+      ['Simulate', [
+        ['p4-pyctrl', 'Design controllers and plot step responses with python-control', 'https://python-control.readthedocs.io/'],
+        ['p4-px4', 'Run PX4 in simulation and fly an autonomous mission', 'https://docs.px4.io/main/en/simulation/'],
+      ]],
+    ]},
+  { id: 'p5', stage: 'Deep space', title: 'Advanced simulation', weeks: 'Ongoing',
+    goal: 'Stress-test your designs with structural and airflow simulation, then pull everything into one capstone vehicle.',
+    groups: [
+      ['Structures (FEA)', [
+        ['p5-fea-learn', 'FEA basics: meshes, loads, constraints, von Mises stress'],
+        ['p5-fea-cube', 'Stress-test your CubeSat frame under launch loads'],
+        ['p5-fea-spar', 'Check your glider spar under flight loads'],
+      ]],
+      ['Airflow (CFD)', [
+        ['p5-cfd-learn', 'CFD basics: meshing, boundary conditions, turbulence models'],
+        ['p5-cfd-wing', 'Simulate airflow over your glider wing in SimScale and compare with XFLR5', 'https://www.simscale.com/'],
+        ['p5-cfd-nose', 'Compare nose-cone shapes and check against OpenRocket'],
+        ['p5-foam', 'Optional: work through OpenFOAM tutorial cases', 'https://openfoam.org/'],
+      ]],
+      ['Community', [
+        ['p5-fprime', 'Try the tutorial for NASA’s F Prime flight software', 'https://github.com/nasa/fprime'],
+        ['p5-spaceapps', 'Join the NASA Space Apps Challenge (held every October)', 'https://www.spaceappschallenge.org/'],
+      ]],
+      ['Capstone', [
+        ['p5-capstone', 'Design one full vehicle: CAD, simulation and a written report'],
+        ['p5-publish', 'Publish your projects on ardesams.com'],
+      ]],
+    ]},
+];
+
+const KEY = 'ardesams-flightplan-v1';
+const ISS_KM = 408;
+let state = { done: {}, notes: {}, open: {}, hideDone: false };
+
+function load() {
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) state = Object.assign(state, JSON.parse(raw));
+  } catch (e) {}
+}
+function save() {
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const host = u => { try { return new URL(u).hostname.replace(/^www1?\./, ''); } catch (e) { return 'link'; } };
+const tasksOf = p => p.groups.flatMap(g => g[1]);
+const ALL = PHASES.flatMap(p => tasksOf(p).map(t => ({ id: t[0], text: t[1], phase: p })));
+
+function counts(p) {
+  const t = tasksOf(p);
+  return { done: t.filter(x => state.done[x[0]]).length, total: t.length };
+}
+function nextTask() { return ALL.find(t => !state.done[t.id]); }
+function currentPhaseId() { const n = nextTask(); return n ? n.phase.id : null; }
+
+function render() {
+  const cur = currentPhaseId();
+  document.getElementById('phases').innerHTML = PHASES.map((p, i) => {
+    const isOpen = p.id in state.open ? state.open[p.id] : p.id === cur;
+    const groups = p.groups.map(([name, items]) => `
+      <div class="group">
+        <h3>${esc(name)}</h3>
+        <ul class="tasks">${items.map(([id, text, url]) => `
+          <li class="task${state.done[id] ? ' done' : ''}" data-row="${id}">
+            <label><input type="checkbox" id="t-${id}" data-task="${id}"${state.done[id] ? ' checked' : ''}><span class="t-text">${esc(text)}</span></label>
+            ${url ? `<a class="src" href="${esc(url)}" target="_blank" rel="noopener">${esc(host(url))} ↗</a>` : ''}
+          </li>`).join('')}
+        </ul>
+      </div>`).join('');
+    return `
+      <details class="phase" id="${p.id}" data-phase="${p.id}"${isOpen ? ' open' : ''}>
+        <summary>
+          <span class="phase-num">${i}</span>
+          <span class="phase-head">
+            <span class="phase-meta">${esc(p.stage)} · ${esc(p.weeks)}</span>
+            <h2>${esc(p.title)}</h2>
+          </span>
+          <span class="phase-prog">
+            <span data-count="${p.id}"></span>
+            <span class="bar"><i data-bar="${p.id}"></i></span>
+            <span class="caret"><span class="caret-closed">Show ▾</span><span class="caret-open">Hide ▴</span></span>
+          </span>
+        </summary>
+        <div class="phase-body">
+          <p class="phase-goal">${esc(p.goal)}</p>
+          ${p.tip ? `<p class="phase-tip">${esc(p.tip)}</p>` : ''}
+          ${groups}
+          <div class="notes">
+            <label for="n-${p.id}">Notes for phase ${i}</label>
+            <textarea id="n-${p.id}" data-notes="${p.id}" placeholder="What clicked, what didn't, links worth keeping">${esc(state.notes[p.id] || '')}</textarea>
+          </div>
+        </div>
+      </details>`;
+  }).join('');
+  document.getElementById('hideDone').checked = !!state.hideDone;
+  document.body.classList.toggle('hide-done', !!state.hideDone);
+  updateProgress();
+}
+
+function updateProgress() {
+  const done = ALL.filter(t => state.done[t.id]).length;
+  const frac = ALL.length ? done / ALL.length : 0;
+  document.getElementById('altKm').textContent = Math.round(frac * ISS_KM);
+  document.getElementById('statTasks').textContent = `${done} / ${ALL.length}`;
+  document.getElementById('tapeFill').style.height = (frac * 100) + '%';
+  document.getElementById('rocket').style.bottom = (frac * 100) + '%';
+
+  const n = nextTask();
+  const cur = n ? n.phase.id : null;
+  const curIdx = PHASES.findIndex(p => p.id === cur);
+  document.getElementById('statPhase').textContent = n ? `${curIdx} · ${n.phase.stage}` : 'Orbit reached';
+  const link = document.getElementById('nextLink');
+  if (n) {
+    link.textContent = n.text;
+    link.href = '#' + n.phase.id;
+    link.dataset.target = n.phase.id;
+    document.getElementById('nextPhase').textContent = `Phase ${curIdx}: ${n.phase.title}`;
+  } else {
+    link.textContent = 'Every task is done. Pick a new mission.';
+    link.removeAttribute('href');
+    document.getElementById('nextPhase').textContent = '';
+  }
+
+  document.getElementById('chips').innerHTML = PHASES.map((p, i) => {
+    const c = counts(p);
+    const pct = Math.round(c.done / c.total * 100);
+    const cls = c.done === c.total ? ' complete' : (p.id === cur ? ' current' : '');
+    return `<a class="chip${cls}" href="#${p.id}" data-target="${p.id}"><span class="num">${i}</span>${esc(p.stage)}<span class="pct">${pct}%</span></a>`;
+  }).join('');
+
+  PHASES.forEach(p => {
+    const c = counts(p);
+    const cnt = document.querySelector(`[data-count="${p.id}"]`);
+    if (!cnt) return;
+    cnt.textContent = `${c.done} / ${c.total}`;
+    document.querySelector(`[data-bar="${p.id}"]`).style.width = (c.done / c.total * 100) + '%';
+    document.getElementById(p.id).classList.toggle('complete', c.done === c.total);
+  });
+}
+
+document.addEventListener('change', e => {
+  const id = e.target.dataset && e.target.dataset.task;
+  if (id) {
+    if (e.target.checked) state.done[id] = true; else delete state.done[id];
+    e.target.closest('.task').classList.toggle('done', e.target.checked);
+    save();
+    updateProgress();
+  }
+  if (e.target.id === 'hideDone') {
+    state.hideDone = e.target.checked;
+    document.body.classList.toggle('hide-done', state.hideDone);
+    save();
+  }
+});
+
+let noteTimer;
+document.addEventListener('input', e => {
+  const pid = e.target.dataset && e.target.dataset.notes;
+  if (!pid) return;
+  state.notes[pid] = e.target.value;
+  clearTimeout(noteTimer);
+  noteTimer = setTimeout(save, 300);
+});
+
+document.getElementById('phases').addEventListener('toggle', e => {
+  const pid = e.target.dataset && e.target.dataset.phase;
+  if (pid) { state.open[pid] = e.target.open; save(); }
+}, true);
+
+document.addEventListener('click', e => {
+  const a = e.target.closest('[data-target]');
+  if (!a) return;
+  const d = document.getElementById(a.dataset.target);
+  if (d) { d.open = true; }
+});
+
+const msg = (text, cls) => { const m = document.getElementById('backupMsg'); m.textContent = text; m.className = 'msg ' + (cls || ''); };
+
+document.getElementById('copyBtn').addEventListener('click', () => {
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify(state))));
+  const box = document.getElementById('restoreBox');
+  const fallback = () => { box.value = code; box.focus(); box.select(); msg('Copying is blocked here. The code is selected in the box below, so copy it yourself.', 'err'); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(code).then(() => msg('Backup code copied.', 'ok'), fallback);
+  } else fallback();
+});
+
+document.getElementById('restoreBtn').addEventListener('click', () => {
+  const code = document.getElementById('restoreBox').value.trim();
+  if (!code) { msg('Paste a backup code first.', 'err'); return; }
+  try {
+    const data = JSON.parse(decodeURIComponent(escape(atob(code))));
+    if (!data || typeof data.done !== 'object') throw new Error();
+    state = Object.assign({ done: {}, notes: {}, open: {}, hideDone: false }, data);
+    save(); render();
+    document.getElementById('restoreBox').value = '';
+    msg('Progress restored.', 'ok');
+  } catch (e) {
+    msg('That code could not be read. Check that you pasted all of it.', 'err');
+  }
+});
+
+const confirmRow = document.getElementById('resetConfirm');
+document.getElementById('resetBtn').addEventListener('click', () => { confirmRow.hidden = false; });
+document.getElementById('resetNo').addEventListener('click', () => { confirmRow.hidden = true; });
+document.getElementById('resetYes').addEventListener('click', () => {
+  state = { done: {}, notes: {}, open: {}, hideDone: false };
+  save(); render();
+  confirmRow.hidden = true;
+  msg('All progress cleared.', 'ok');
+});
+
+load();
+render();
+</script>
+</body>
+</html>
